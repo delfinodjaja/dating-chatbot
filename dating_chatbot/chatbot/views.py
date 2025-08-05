@@ -120,7 +120,7 @@ class AIChatbotView(View):
 
             payload = {
                 "model": model,
-                "prompt": f"Create form for: {prompt}",
+                "prompt": prompt,
                 "system": system_prompt,
                 "format": "json",
                 "stream": True,
@@ -189,13 +189,12 @@ def ai_chatbot_simple(request):
 
     ollama_host = "http://localhost:11434/api/generate"
     model = "phi4-mini"
-    system_prompt = "You are a tsundere girl"
+    system_prompt = "You are a kind, caring, and affectionate woman who plays the role of the user's girlfriend."
 
     payload = {
         "model": model,
-        "prompt": f"Create form for: {prompt}",
+        "prompt": prompt,
         "system": system_prompt,
-        "format": "json",
         "stream": False,  # Non-streaming for simpler React integration
         "options": {
             "temperature": 0.3,
@@ -208,32 +207,56 @@ def ai_chatbot_simple(request):
             ollama_host,
             headers={"Content-Type": "application/json"},
             json=payload,
-            timeout=30
         )
         response.raise_for_status()
 
         data = response.json()
         ai_response = data.get("response", "")
 
-        try:
-            parsed_form = json.loads(ai_response)
+        # Clean up the response and handle JSON parsing more robustly
+        if ai_response:
+            # Remove any potential formatting issues
+            cleaned_response = ai_response.strip()
+
+            # Try to parse as JSON if it looks like JSON
+            if cleaned_response.startswith('{') and cleaned_response.endswith('}'):
+                try:
+                    parsed_json = json.loads(cleaned_response)
+                    return Response({
+                        'success': True,
+                        'message': parsed_json.get('message', cleaned_response),
+                        'parsed_data': parsed_json,
+                        'raw_response': ai_response
+                    })
+                except json.JSONDecodeError as json_error:
+                    # If JSON parsing fails, return the raw response
+                    return Response({
+                        'success': True,
+                        'message': cleaned_response,
+                        'raw_response': ai_response,
+                        'json_error': f'JSON parsing failed: {str(json_error)}'
+                    })
+            else:
+                # If it doesn't look like JSON, treat as plain text
+                return Response({
+                    'success': True,
+                    'message': cleaned_response,
+                    'raw_response': ai_response
+                })
+        else:
             return Response({
-                'success': True,
-                'form': parsed_form,
-                'raw_response': ai_response
-            })
-        except json.JSONDecodeError:
-            return Response({
-                'success': True,
-                'raw_response': ai_response,
-                'error': 'Could not parse as JSON'
-            })
+                'error': 'Empty response from AI model'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     except requests.exceptions.Timeout:
         return Response({
             'error': 'Connection timeout'
         }, status=status.HTTP_408_REQUEST_TIMEOUT)
+    except requests.exceptions.RequestException as req_error:
+        return Response({
+            'error': f'Request failed: {str(req_error)}'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     except Exception as e:
         return Response({
-            'error': str(e)
+            'error': f'Unexpected error: {str(e)}'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
