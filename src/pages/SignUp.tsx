@@ -1,4 +1,4 @@
-// src/pages/Login.tsx
+// src/pages/Signup.tsx
 import React, { useState, CSSProperties } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -13,7 +13,7 @@ const styles: { [key: string]: CSSProperties } = {
     padding: "16px",
   },
   box: {
-    backgroundColor: "rgba(24, 24, 27, 0.9)", // dark with opacity
+    backgroundColor: "rgba(24, 24, 27, 0.9)",
     backdropFilter: "blur(10px)",
     padding: "40px",
     borderRadius: "20px",
@@ -44,25 +44,22 @@ const styles: { [key: string]: CSSProperties } = {
     marginBottom: "8px",
     fontWeight: "600",
     fontSize: "14px",
-    color: "#d1d5db", // gray-300
+    color: "#d1d5db",
   },
   input: {
     width: "100%",
     padding: "12px",
     borderRadius: "10px",
     border: "none",
-    backgroundColor: "#1f2937", // gray-800
+    backgroundColor: "#1f2937",
     color: "white",
     fontSize: "16px",
     marginBottom: "20px",
     outline: "none",
   },
-  inputFocus: {
-    boxShadow: "0 0 0 3px #ec4899", // pink ring
-  },
   button: {
     width: "100%",
-    backgroundColor: "#ec4899", // pink-500
+    backgroundColor: "#8b5cf6",
     color: "white",
     fontWeight: "700",
     padding: "14px",
@@ -70,29 +67,31 @@ const styles: { [key: string]: CSSProperties } = {
     borderRadius: "12px",
     cursor: "pointer",
     fontSize: "18px",
-    boxShadow: "0 4px 14px rgba(236, 72, 153, 0.6)",
+    boxShadow: "0 4px 14px rgba(139, 92, 246, 0.6)",
     transition: "background-color 0.3s ease",
   },
   buttonHover: {
-    backgroundColor: "#db2777", // pink-600
+    backgroundColor: "#7c3aed",
   },
   footerText: {
     marginTop: "24px",
     fontSize: "14px",
-    color: "#9ca3af", // gray-400
+    color: "#9ca3af",
     textAlign: "center",
   },
   footerLink: {
-    color: "#ec4899",
+    color: "#8b5cf6",
     fontWeight: "600",
     textDecoration: "none",
     cursor: "pointer",
   },
 };
 
-const Login: React.FC = () => {
+const SignUp: React.FC = () => {
   const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
   const [error, setError] = useState("");
   const [btnHover, setBtnHover] = useState(false);
   const navigate = useNavigate();
@@ -101,22 +100,26 @@ const Login: React.FC = () => {
     e.preventDefault();
     setError("");
 
+    if (password !== confirm) {
+      setError("Passwords do not match.");
+      return;
+    }
+
     try {
-      const response = await fetch("http://localhost:8000/api/auth/login/", {
+      const response = await fetch("http://localhost:8000/api/auth/register/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ username, email, password}),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.detail || "Login failed");
+        throw new Error(errorData.detail || "Signup failed");
       }
 
       const data = await response.json();
-      console.log("Login successful:", data);
-
-      navigate("/chatbot");
+      console.log("Signup successful:", data);
+      navigate("/login");
     } catch (err: any) {
       setError(err.message || "Server error");
     }
@@ -125,7 +128,7 @@ const Login: React.FC = () => {
   return (
     <div style={styles.container}>
       <div style={styles.box}>
-        <h2 style={styles.title}>Welcome Back</h2>
+        <h2 style={styles.title}>Create Account</h2>
 
         {error && <div style={styles.error}>{error}</div>}
 
@@ -144,6 +147,20 @@ const Login: React.FC = () => {
             autoComplete="username"
           />
 
+          <label htmlFor="email" style={styles.label}>
+            Email
+          </label>
+          <input
+            id="email"
+            type="email"
+            placeholder="Enter your email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            style={styles.input}
+            autoComplete="email"
+          />
+
           <label htmlFor="password" style={styles.label}>
             Password
           </label>
@@ -155,7 +172,21 @@ const Login: React.FC = () => {
             onChange={(e) => setPassword(e.target.value)}
             required
             style={styles.input}
-            autoComplete="current-password"
+            autoComplete="new-password"
+          />
+
+          <label htmlFor="confirm" style={styles.label}>
+            Confirm Password
+          </label>
+          <input
+            id="confirm"
+            type="password"
+            placeholder="Confirm your password"
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+            required
+            style={styles.input}
+            autoComplete="new-password"
           />
 
           <button
@@ -167,14 +198,14 @@ const Login: React.FC = () => {
             onMouseEnter={() => setBtnHover(true)}
             onMouseLeave={() => setBtnHover(false)}
           >
-            Login
+            Sign Up
           </button>
         </form>
 
         <p style={styles.footerText}>
-          Don't have an account?{" "}
-          <a href="/signup" style={styles.footerLink}>
-            Sign up here
+          Already have an account?{" "}
+          <a href="/login" style={styles.footerLink}>
+            Log in here
           </a>
         </p>
       </div>
@@ -182,4 +213,4 @@ const Login: React.FC = () => {
   );
 };
 
-export default Login;
+export default SignUp;
