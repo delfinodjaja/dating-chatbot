@@ -109,7 +109,7 @@ const SignUp: React.FC = () => {
       const response = await fetch("http://localhost:8000/api/auth/register/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, email, password}),
+        body: JSON.stringify({ username, email, password1: password, password2: confirm })
       });
 
       if (!response.ok) {
