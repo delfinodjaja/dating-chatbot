@@ -19,12 +19,11 @@ const Login: React.FC = () => {
           // Add CSRF token here if needed for session auth
         },
         body: JSON.stringify({ username, password }),
-        credentials: "include",  // if using cookies/session auth
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error("Login failed");
+        throw new Error(errorData.detail || "Login failed");
       }
 
       const data = await response.json();
@@ -33,7 +32,7 @@ const Login: React.FC = () => {
 
       navigate("/chatbot"); // redirect after login success
     } catch (err: any) {
-      setError("Server error");
+      setError(err.message || "Server error");
     }
   };
 
