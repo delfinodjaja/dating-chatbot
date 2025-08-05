@@ -18,6 +18,7 @@ import requests
 
 
 # Authentication API endpoints
+@csrf_exempt
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def login_api(request):
@@ -44,7 +45,7 @@ def login_api(request):
         'errors': login_form.errors
     }, status=status.HTTP_400_BAD_REQUEST)
 
-
+@csrf_exempt
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def register_api(request):
@@ -71,7 +72,7 @@ def register_api(request):
         'errors': register_form.errors
     }, status=status.HTTP_400_BAD_REQUEST)
 
-
+@csrf_exempt
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def logout_api(request):
@@ -174,8 +175,9 @@ class AIChatbotView(View):
 
 
 # Alternative non-streaming version for simpler React integration
+@csrf_exempt
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+#@permission_classes([IsAuthenticated])
 def ai_chatbot_simple(request):
     """Simple non-streaming AI chatbot endpoint"""
     prompt = request.data.get("message", "")
