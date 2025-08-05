@@ -113,9 +113,23 @@ const SignUp: React.FC = () => {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || "Signup failed");
+      const errorData = await response.json();
+
+      // Parse and flatten all error messages into a single string
+      let messages = "";
+
+      if (errorData.errors) {
+        for (const [field, errors] of Object.entries(errorData.errors)) {
+          messages += `${(errors as string[]).join(", ")}\n`;
+        }
+      } else if (errorData.detail) {
+        messages = errorData.detail;
+      } else {
+        messages = "Signup failed";
       }
+
+      throw new Error(messages);
+    }
 
       const data = await response.json();
       console.log("Signup successful:", data);
