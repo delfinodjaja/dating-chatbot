@@ -30,12 +30,12 @@ const ChatBox: React.FC<ChatBoxProps> = ({ behavior }) => {
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setLoading(true);
-
+    console.log(behavior);
     try {
       const res = await fetch("http://localhost:8000/api/chatbot/simple/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: userMessage.text, behavior }),
+        body: JSON.stringify({ message: userMessage.text, setting:behavior }),
       });
       const data = await res.json();
 

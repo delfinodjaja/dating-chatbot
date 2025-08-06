@@ -5,10 +5,10 @@ type PreferenceProps = {
 };
 
 const behaviors = [
-  { id: "friendly", label: "Friendly & Casual" },
-  { id: "professional", label: "Professional & Formal" },
-  { id: "funny", label: "Funny & Playful" },
-  { id: "romantic", label: "Romantic & Dating" },
+  { id: "tsundere", label: "Tsundere" },
+  { id: "kuudere", label: "kuudere" },
+  { id: "deredere", label: "Deredere" },
+  { id: "yandere", label: "Yandere" },
 ];
 
 const Preference: React.FC<PreferenceProps> = ({ onChange }) => {
