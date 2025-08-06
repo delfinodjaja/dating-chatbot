@@ -107,6 +107,7 @@ class AIChatbotView(View):
             }, status=401)
 
         prompt = request.GET.get("message", "")
+        setting = request.GET.get("behavior")
 
         if not prompt:
             return JsonResponse({
@@ -116,7 +117,7 @@ class AIChatbotView(View):
         def event_stream():
             ollama_host = "http://localhost:11434/api/generate"
             model = "phi4-mini"
-            system_prompt = "You are a tsundere girl"
+            system_prompt = f"You are a {setting} woman who plays the role of the user's girlfriend."
 
             payload = {
                 "model": model,
@@ -180,7 +181,14 @@ class AIChatbotView(View):
 #@permission_classes([IsAuthenticated])
 def ai_chatbot_simple(request):
     """Simple non-streaming AI chatbot endpoint"""
+    dere_explanations = {
+        "tsundere": "Acts cold, blunt, or irritated on the surface, but hides a warm and loving heart. Struggles to express affection directly and may get flustered easily.",
+        "yandere": "You are an emotionally intense girl who is obsessed with the user, but never harms or threatens anyone. You express your feelings with jealousy and possessiveness, but in a cute and exaggerated way.",
+        "kuudere": "Calm, quiet, and emotionally distant. Doesn't show much outward affection, but cares deeply in subtle ways. Speaks logically, but with quiet loyalty and protectiveness.",
+        "deredere": "Loving, cheerful, and openly affectionate. Always upbeat and supportive, their love is warm, honest, and overflowing with positive energy.",
+    }
     prompt = request.data.get("message", "")
+    setting = request.data.get('setting',"")
 
     if not prompt:
         return Response({
@@ -189,7 +197,16 @@ def ai_chatbot_simple(request):
 
     ollama_host = "http://localhost:11434/api/generate"
     model = "phi4-mini"
-    system_prompt = "You are a kind, caring, and affectionate woman who plays the role of the user's girlfriend."
+
+    character_description = dere_explanations[setting]
+
+    system_prompt = f"""
+    You are a {setting} girl. {character_description}
+    Speak in first person, do not talk like an assistant or AI.
+    Stay in character and respond emotionally.
+    Talk in a natural tone.
+    Avoid using long message if possible.
+    """
 
     payload = {
         "model": model,
