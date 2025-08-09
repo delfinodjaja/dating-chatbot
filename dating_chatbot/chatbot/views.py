@@ -95,85 +95,55 @@ def logout_api(request):
         }, status=status.HTTP_400_BAD_REQUEST)
 
 
-@method_decorator(csrf_exempt, name='dispatch')
-class AIChatbotView(View):
-    """AI Chatbot streaming endpoint for React"""
+@csrf_exempt
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def create_chatbot(request):
 
-    def get(self, request):
-        # Check authentication (optional - remove if you want public access)
-        if not request.user.is_authenticated:
-            return JsonResponse({
-                'error': 'Authentication required'
-            }, status=401)
+    ollama_host = "http://localhost:11434/api/generate"
+    model = "phi4-mini"
 
-        prompt = request.GET.get("message", "")
-        setting = request.GET.get("behavior")
+    personality=request.data.get('setting',"")
+    gender=request.data.get('gender',"")
+    payload = {
+        "model": model,
+        "prompt": (
+            f"Create a richly detailed character profile for a {gender} with {personality}. "
+            "The character should feel realistic, relatable, and unique. "
+            "Include details such as upbringing, hobbies, favorite places, small habits or quirks, and how they typically interact with others. "
+            "Favorite food should match their personality and background. "
+            "Return ONLY a valid JSON object with the following keys: "
+            "\"name\" (string), "
+            "\"favorite_food\" (string), "
+            "\"hobbies\" (array of strings), "
+            "\"quirks\" (array of strings, small habits or unique behaviors), "
+            "\"background\" (string, 4–6 sentences blending personality, life story, and key traits)."
+        ),
+        "stream": False,
+        "options": {
+            "temperature": 0.9,  # More creative
+            "num_ctx": 4096
+        }
+    }
+    try:
+        # Send request to Ollama API
+        response = requests.post(ollama_host, json=payload)
+        response.raise_for_status()
 
-        if not prompt:
-            return JsonResponse({
-                'error': 'Message parameter is required'
-            }, status=400)
+        # Extract generated text
+        data = response.json()
+        generated_text = data.get("response", "").strip()
 
-        def event_stream():
-            ollama_host = "http://localhost:11434/api/generate"
-            model = "phi4-mini"
-            system_prompt = f"You are a {setting} woman who plays the role of the user's girlfriend."
+        # Attempt to parse as JSON
+        try:
+            character_data = json.loads(generated_text)
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON returned from AI", "raw": generated_text}, status=500)
 
-            payload = {
-                "model": model,
-                "prompt": prompt,
-                "system": system_prompt,
-                "format": "json",
-                "stream": True,
-                "options": {
-                    "temperature": 0.3,
-                    "num_ctx": 4096
-                }
-            }
+        return JsonResponse(character_data)
 
-            try:
-                with requests.post(
-                        ollama_host,
-                        headers={"Content-Type": "application/json"},
-                        json=payload,
-                        stream=True,
-                        timeout=30
-                ) as response:
-                    response.raise_for_status()
-
-                    buffer = ""
-                    for line in response.iter_lines(decode_unicode=True):
-                        if line:
-                            try:
-                                data = json.loads(line)
-                                token = data.get("response", "")
-                                buffer += token
-
-                                yield f"data: {json.dumps({'chunk': token})}\n\n"
-
-                            except json.JSONDecodeError:
-                                continue
-
-                    # Try to parse final buffer
-                    try:
-                        parsed_json = json.loads(buffer)
-                        yield f"data: {json.dumps({'form': parsed_json, 'complete': True})}\n\n"
-                    except json.JSONDecodeError as e:
-                        yield f"data: {json.dumps({'error': f'Could not parse final JSON: {str(e)}'})}\n\n"
-
-            except requests.exceptions.Timeout:
-                yield f"data: {json.dumps({'error': 'Connection timeout'})}\n\n"
-            except Exception as e:
-                yield f"data: {json.dumps({'error': str(e)})}\n\n"
-            finally:
-                yield "event: close\ndata: {}\n\n"
-
-        response = StreamingHttpResponse(event_stream(), content_type="text/event-stream")
-        response['Cache-Control'] = 'no-cache'
-        response['Access-Control-Allow-Origin'] = '*'  # Configure properly for production
-        response['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
-        return response
-
+    except requests.RequestException as e:
+        return JsonResponse({"error": str(e)}, status=500)
 
 # Alternative non-streaming version for simpler React integration
 @csrf_exempt
