@@ -5,7 +5,7 @@ from django.contrib.auth.models import User
 # Create your models here.
 class ChatbotItem(models.Model):
     name = models.CharField(max_length=225, unique=True,null=True)
-    personality = models.CharField(max_length=225, unique=True,null=True)
+    personality = models.CharField(max_length=225, unique=False,null=True)
     gender = models.CharField(max_length=225, unique=False,null=True)
     quirks = models.CharField(max_length=225, unique=False,null=True)
     favorite_food = models.CharField(max_length=225, unique=False,null=True)
