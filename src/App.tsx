@@ -2,6 +2,8 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 import Login from "./pages/Login";
 import SignUp from "./pages/SignUp";
 import Chatbot from "./pages/ChatBot";
+import ChatBotForm from "./pages/ChatBoxForm";
+
 
 function App() {
   return (
@@ -11,6 +13,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<SignUp />} />
         <Route path="/chatbot" element={<Chatbot />} />
+        <Route path="/ChatBotForm" element={<ChatBotForm />} />
       </Routes>
     </Router>
   );
