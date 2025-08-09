@@ -5,11 +5,32 @@ const ChatbotForm: React.FC = () => {
   const [gender, setGender] = useState("");
   const [generatedText, setGeneratedText] = useState("");
 
-  const handleGenerate = () => {
-    setGeneratedText(
-      `Your ${gender || "unspecified gender"} bot with a ${personality || "neutral"} personality is ready to charm!`
+const handleGenerate = async () => {
+  if (!personality || !gender) {
+    setGeneratedText("Please select both personality and gender.");
+    return;
+  }
+
+  try {
+    const res = await fetch(
+      `http://localhost:8000/generate-character/?personality=${encodeURIComponent(personality)}&gender=${encodeURIComponent(gender)}`
     );
-  };
+
+    if (!res.ok) {
+      throw new Error("Failed to fetch character");
+    }
+
+    const data = await res.json();
+
+    // Format nicely
+    setGeneratedText(
+      `Name: ${data.name}\nFavorite Food: ${data.favorite_food}\nBackground: ${data.background}`
+    );
+  } catch (err) {
+    console.error(err);
+    setGeneratedText("Error generating character.");
+  }
+};
 
   return (
     <div className="fullscreen-container">
