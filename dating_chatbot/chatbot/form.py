@@ -2,6 +2,8 @@ from django import forms
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from .models import ChatbotItem
+from rest_framework import serializers
+
 
 class Login(AuthenticationForm):
     username = forms.CharField(widget=forms.TextInput())
@@ -15,7 +17,7 @@ class UserRegistration(UserCreationForm):
         model = User
         fields = ['username', 'email', 'password1', 'password2']
 
-class ChatbotCreationForm():
+class ChatbotCreationForm(serializers.ModelSerializer):
     class Meta:
         model = ChatbotItem
-        fields = ['name', 'personality', 'gender', 'background', 'love_meter']
+        fields = ['name', 'personality', 'quirks', 'gender', 'background', 'love_meter','hobbies', 'favorite_food']

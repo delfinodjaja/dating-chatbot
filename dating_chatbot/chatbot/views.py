@@ -1,7 +1,7 @@
 # views.py
 from django.http import  JsonResponse
 from rest_framework.permissions import IsAuthenticated
-from .form import UserRegistration
+from .form import UserRegistration, ChatbotCreationForm
 import json
 import requests
 import re
@@ -302,3 +302,10 @@ def ai_chatbot_simple(request):
         return Response({
             'error': f'Unexpected error: {str(e)}'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_bot_list(request):
+    items=ChatbotItem.objects.filter(created_by=request.user)
+    serializer = ChatbotCreationForm(items, many=True)
+    return Response(serializer.data)
