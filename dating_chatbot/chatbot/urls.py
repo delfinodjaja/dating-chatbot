@@ -9,5 +9,5 @@ urlpatterns = [
 
     # AI Chatbot endpoints
     path('api/chatbot/simple/', views.ai_chatbot_simple, name='ai_chatbot_simple'),
-    path('api/chatbot/create',views.create_chatbot, name='create_chatbot')
+    path('api/chatbot/create/',views.create_chatbot, name='create_chatbot')
 ]

@@ -1,49 +1,61 @@
 # views.py
-from django.shortcuts import redirect
-from django.contrib.auth import login, logout
-from django.http import StreamingHttpResponse, JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_http_methods
-from django.contrib.auth.decorators import login_required
-from django.utils.decorators import method_decorator
-from django.views.generic import View
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework.response import Response
-from rest_framework import status
-from rest_framework_simplejwt.tokens import RefreshToken
-from .form import UserRegistration, Login
+from django.http import  JsonResponse
+from rest_framework.permissions import IsAuthenticated
+from .form import UserRegistration
 import json
 import requests
+import re
+from .models import ChatbotItem
+from django.contrib.auth import authenticate
+from django.contrib.auth.forms import AuthenticationForm
+from django.views.decorators.csrf import csrf_exempt
+from rest_framework import status
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from rest_framework_simplejwt.tokens import RefreshToken
 
 
-# Authentication API endpoints
 @csrf_exempt
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def login_api(request):
     """API endpoint for user login"""
-    login_form = Login(request, data=request.data)
+    username = request.data.get('username')
+    password = request.data.get('password')
 
-    if login_form.is_valid():
-        user = login_form.get_user()
-        refresh = RefreshToken.for_user(user)
-
+    if not username or not password:
         return Response({
-            'success': True,
-            'access_token': str(refresh.access_token),
-            'refresh_token': str(refresh),
-            'user': {
-                'id': user.id,
-                'username': user.username,
-                'email': user.email
-            }
-        }, status=status.HTTP_200_OK)
+            'success': False,
+            'errors': {'non_field_errors': ['Username and password are required']}
+        }, status=status.HTTP_400_BAD_REQUEST)
 
-    return Response({
-        'success': False,
-        'errors': login_form.errors
-    }, status=status.HTTP_400_BAD_REQUEST)
+    user = authenticate(username=username, password=password)
+
+    if user is not None:
+        if user.is_active:
+            refresh = RefreshToken.for_user(user)
+            return Response({
+                'success': True,
+                'access_token': str(refresh.access_token),
+                'refresh_token': str(refresh),
+                'user': {
+                    'id': user.id,
+                    'username': user.username,
+                    'email': user.email
+                }
+            }, status=status.HTTP_200_OK)
+        else:
+            return Response({
+                'success': False,
+                'errors': {'non_field_errors': ['User account is disabled']}
+            }, status=status.HTTP_400_BAD_REQUEST)
+    else:
+        return Response({
+            'success': False,
+            'errors': {'non_field_errors': ['Invalid username or password']}
+        }, status=status.HTTP_400_BAD_REQUEST)
+
 
 @csrf_exempt
 @api_view(['POST'])
@@ -72,6 +84,34 @@ def register_api(request):
         'errors': register_form.errors
     }, status=status.HTTP_400_BAD_REQUEST)
 
+
+# Alternative login using AuthenticationForm if you prefer
+@csrf_exempt
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def login_api_with_form(request):
+    """Alternative API endpoint for user login using AuthenticationForm"""
+    login_form = AuthenticationForm(data=request.data)
+
+    if login_form.is_valid():
+        user = login_form.get_user()
+        refresh = RefreshToken.for_user(user)
+
+        return Response({
+            'success': True,
+            'access_token': str(refresh.access_token),
+            'refresh_token': str(refresh),
+            'user': {
+                'id': user.id,
+                'username': user.username,
+                'email': user.email
+            }
+        }, status=status.HTTP_200_OK)
+
+    return Response({
+        'success': False,
+        'errors': login_form.errors
+    }, status=status.HTTP_400_BAD_REQUEST)
 @csrf_exempt
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -97,13 +137,13 @@ def logout_api(request):
 
 @csrf_exempt
 @api_view(['POST'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def create_chatbot(request):
 
     ollama_host = "http://localhost:11434/api/generate"
     model = "phi4-mini"
 
-    personality=request.data.get('setting',"")
+    personality=request.data.get('personality',"")
     gender=request.data.get('gender',"")
     payload = {
         "model": model,
@@ -126,29 +166,44 @@ def create_chatbot(request):
         }
     }
     try:
-        # Send request to Ollama API
         response = requests.post(ollama_host, json=payload)
         response.raise_for_status()
-
-        # Extract generated text
         data = response.json()
         generated_text = data.get("response", "").strip()
 
-        # Attempt to parse as JSON
-        try:
-            character_data = json.loads(generated_text)
-        except json.JSONDecodeError:
-            return JsonResponse({"error": "Invalid JSON returned from AI", "raw": generated_text}, status=500)
+        # Extract JSON from possible extra text
+        json_match = re.search(r"\{.*\}", generated_text, re.DOTALL)
+        if not json_match:
+            return JsonResponse(
+                {"error": "No JSON found in AI response", "raw": generated_text},
+                status=500
+            )
 
+        character_data = json.loads(json_match.group(0))
+        chatbot = ChatbotItem.objects.create(
+            name=character_data.get("name", ""),
+            favorite_food=character_data.get("favorite_food", ""),
+            hobbies=character_data.get("hobbies", []),
+            quirks=character_data.get("quirks", []),
+            background=character_data.get("background", ""),
+            personality=personality,
+            gender=gender,
+            created_by=request.user  # will be the logged-in user
+        )
         return JsonResponse(character_data)
 
     except requests.RequestException as e:
-        return JsonResponse({"error": str(e)}, status=500)
+        return JsonResponse({"error": f"Ollama API error: {str(e)}"}, status=500)
+    except json.JSONDecodeError as e:
+        return JsonResponse(
+            {"error": f"JSON parse error: {str(e)}", "raw": generated_text},
+            status=500
+        )
 
 # Alternative non-streaming version for simpler React integration
 @csrf_exempt
 @api_view(['POST'])
-#@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated])
 def ai_chatbot_simple(request):
     """Simple non-streaming AI chatbot endpoint"""
     dere_explanations = {
