@@ -118,7 +118,7 @@ const handleSubmit = async (e: React.FormEvent) => {
     localStorage.setItem("access_token", responseData.access_token);
     localStorage.setItem("refresh_token", responseData.refresh_token);
 
-    navigate("/ChatBotForm");
+    navigate("/Chatbot");
   } catch (err: any) {
     setError(err.message || "Server error");
   }

@@ -1,4 +1,5 @@
 import React, { useState, CSSProperties } from "react";
+import { useNavigate } from "react-router-dom";
 
 interface Chat {
   id: number;
@@ -44,24 +45,26 @@ const ChatApp: React.FC = () => {
   const [selectedChat, setSelectedChat] = useState<Chat | null>(chats[0]);
   const [newMessage, setNewMessage] = useState("");
   const [showBotInfo, setShowBotInfo] = useState(false);
+  const navigate = useNavigate();
 
   const addChat = () => {
-    const name = prompt("Enter name:");
-    if (name) {
-      const newChat: Chat = {
-        id: Date.now(),
-        name,
-        lastMessage: "",
-        messages: [],
-        botInfo: {
-          age: 0,
-          hobby: "Unknown",
-          relationship: "Unknown",
-          background: "No background info available.",
-        },
-      };
-      setChats((prev) => [...prev, newChat]);
-    }
+    // const name = prompt("Enter name:");
+    // if (name) {
+    //   const newChat: Chat = {
+    //     id: Date.now(),
+    //     name,
+    //     lastMessage: "",
+    //     messages: [],
+    //     botInfo: {
+    //       age: 0,
+    //       hobby: "Unknown",
+    //       relationship: "Unknown",
+    //       background: "No background info available.",
+    //     },
+    //   };
+    //   setChats((prev) => [...prev, newChat]);
+    // }
+    navigate("/ChatBotForm");
   };
 
   const deleteChat = (id: number) => {
