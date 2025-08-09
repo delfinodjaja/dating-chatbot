@@ -15,7 +15,6 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 
-
 @csrf_exempt
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -135,16 +134,17 @@ def logout_api(request):
         }, status=status.HTTP_400_BAD_REQUEST)
 
 
+# Generate only (do NOT save)
 @csrf_exempt
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
-def create_chatbot(request):
-
+def generate_character(request):
     ollama_host = "http://localhost:11434/api/generate"
     model = "phi4-mini"
 
-    personality=request.data.get('personality',"")
-    gender=request.data.get('gender',"")
+    personality = request.data.get('personality', "")
+    gender = request.data.get('gender', "")
+
     payload = {
         "model": model,
         "prompt": (
@@ -161,7 +161,7 @@ def create_chatbot(request):
         ),
         "stream": False,
         "options": {
-            "temperature": 0.9,  # More creative
+            "temperature": 0.9,
             "num_ctx": 4096
         }
     }
@@ -171,34 +171,48 @@ def create_chatbot(request):
         data = response.json()
         generated_text = data.get("response", "").strip()
 
-        # Extract JSON from possible extra text
         json_match = re.search(r"\{.*\}", generated_text, re.DOTALL)
         if not json_match:
-            return JsonResponse(
-                {"error": "No JSON found in AI response", "raw": generated_text},
-                status=500
-            )
+            return JsonResponse({"error": "No JSON found in AI response", "raw": generated_text}, status=500)
 
         character_data = json.loads(json_match.group(0))
-        chatbot = ChatbotItem.objects.create(
-            name=character_data.get("name", ""),
-            favorite_food=character_data.get("favorite_food", ""),
-            hobbies=character_data.get("hobbies", []),
-            quirks=character_data.get("quirks", []),
-            background=character_data.get("background", ""),
-            personality=personality,
-            gender=gender,
-            created_by=request.user  # will be the logged-in user
-        )
         return JsonResponse(character_data)
 
     except requests.RequestException as e:
         return JsonResponse({"error": f"Ollama API error: {str(e)}"}, status=500)
     except json.JSONDecodeError as e:
-        return JsonResponse(
-            {"error": f"JSON parse error: {str(e)}", "raw": generated_text},
-            status=500
+        return JsonResponse({"error": f"JSON parse error: {str(e)}", "raw": generated_text}, status=500)
+
+
+# Save character to DB (called when OK pressed)
+@csrf_exempt
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def save_character(request):
+    data = request.data
+    try:
+        quirks = data.get("quirks", [])
+        hobbies = data.get("hobbies", [])
+
+        # Convert lists to JSON strings
+        if isinstance(quirks, list):
+            quirks = json.dumps(quirks)
+        if isinstance(hobbies, list):
+            hobbies = json.dumps(hobbies)
+
+        chatbot = ChatbotItem.objects.create(
+            name=data.get("name", ""),
+            favorite_food=data.get("favorite_food", ""),
+            hobbies=hobbies,
+            quirks=quirks,
+            background=data.get("background", ""),
+            personality=data.get("personality", ""),
+            gender=data.get("gender", ""),
+            created_by=request.user
         )
+        return JsonResponse({"success": True, "id": chatbot.id})
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
 
 # Alternative non-streaming version for simpler React integration
 @csrf_exempt
