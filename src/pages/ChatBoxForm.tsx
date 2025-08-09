@@ -10,11 +10,20 @@ const handleGenerate = async () => {
     setGeneratedText("Please select both personality and gender.");
     return;
   }
+  const token = localStorage.getItem("access_token");
 
   try {
-    const res = await fetch(
-      `http://localhost:8000/api/chatbot/create/?personality=${encodeURIComponent(personality)}&gender=${encodeURIComponent(gender)}`
-    );
+    const res = await fetch("http://localhost:8000/api/chatbot/create/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        personality,
+        gender
+      }),
+    });
 
     if (!res.ok) {
       throw new Error("Failed to fetch character");
@@ -30,6 +39,7 @@ const handleGenerate = async () => {
     console.error(err);
     setGeneratedText("Error generating character.");
   }
+
 };
 
   return (

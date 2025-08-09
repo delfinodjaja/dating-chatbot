@@ -133,7 +133,7 @@ const SignUp: React.FC = () => {
 
       const data = await response.json();
       console.log("Signup successful:", data);
-      navigate("/ChatbBotForm");
+      navigate("/Login");
     } catch (err: any) {
       setError(err.message || "Server error");
     }
