@@ -13,7 +13,7 @@ const handleGenerate = async () => {
 
   try {
     const res = await fetch(
-      `http://localhost:8000/generate-character/?personality=${encodeURIComponent(personality)}&gender=${encodeURIComponent(gender)}`
+      `http://localhost:8000/api/chatbot/create/?personality=${encodeURIComponent(personality)}&gender=${encodeURIComponent(gender)}`
     );
 
     if (!res.ok) {
