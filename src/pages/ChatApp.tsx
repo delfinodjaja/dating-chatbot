@@ -1,70 +1,116 @@
-import React, { useState, CSSProperties } from "react";
+import React, { useState, useEffect, CSSProperties } from "react";
 import { useNavigate } from "react-router-dom";
 
+// Interface for your app's chat state
 interface Chat {
   id: number;
   name: string;
   lastMessage: string;
   messages: { text: string; sender: "user" | "bot" }[];
   botInfo: {
-    age: number;
     hobby: string;
-    relationship: string;
+    relationship: string | number;
     background: string;
+    quirks?: string;
+    favorite_food?: string;
     [key: string]: any;
   };
 }
 
+// Interface matching your API response shape
+interface ApiChatbot {
+  id: number;
+  name: string;
+  hobbies?: string;
+  love_meter?: number;
+  background?: string;
+  quirks?: string;
+  favorite_food?: string;
+  // Add any other fields your backend returns here
+}
+
 const ChatApp: React.FC = () => {
-  const [chats, setChats] = useState<Chat[]>([
-    {
-      id: 1,
-      name: "Alice",
-      lastMessage: "Hey there!",
-      messages: [{ text: "Hey there!", sender: "bot" }],
-      botInfo: {
-        age: 28,
-        hobby: "Reading books",
-        relationship: "Single",
-        background: "Alice is a friendly chatbot who loves literature.",
-      },
-    },
-    {
-      id: 2,
-      name: "Bob",
-      lastMessage: "How's it going?",
-      messages: [{ text: "How's it going?", sender: "bot" }],
-      botInfo: {
-        age: 30,
-        hobby: "Gaming",
-        relationship: "Married",
-        background: "Bob is a chatbot who likes video games and tech.",
-      },
-    },
-  ]);
-  const [selectedChat, setSelectedChat] = useState<Chat | null>(chats[0]);
+  const [chats, setChats] = useState<Chat[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Load chatbot data from API on mount
+  useEffect(() => {
+    const fetchChats = async () => {
+      try {
+        const token = localStorage.getItem("access_token");
+
+        const res = await fetch("http://localhost:8000/api/chatbot/get_list/", {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: token ? `Bearer ${token}` : "",
+          },
+        });
+
+        if (!res.ok) {
+          throw new Error("Failed to fetch chats");
+        }
+
+        // Use ApiChatbot[] here
+        const data: ApiChatbot[] = await res.json();
+
+        // Map API data to your Chat interface
+        const mappedChats: Chat[] = data.map((item) => ({
+          id: item.id,
+          name: item.name || "Unknown",
+          lastMessage: "", // or get from API if available
+          messages: [], // initially empty or from API
+          botInfo: {
+            hobby: item.hobbies || "Unknown",
+            relationship: item.love_meter !== undefined ? item.love_meter.toString() : "Unknown",
+            background: item.background || "No background info available.",
+            quirks: item.quirks || "None",
+            favorite_food: item.favorite_food || "Unknown",
+          },
+        }));
+
+        setChats(mappedChats);
+        setLoading(false);
+      } catch (err: any) {
+        setError(err.message);
+        setLoading(false);
+      }
+    };
+
+    fetchChats();
+  }, []);
+
+  // Make sure selectedChat initializes properly after chats load
+  const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
+
+  // When chats change, set first chat as selected by default if none selected
+  useEffect(() => {
+    if (chats.length > 0 && !selectedChat) {
+      setSelectedChat(chats[0]);
+    }
+  }, [chats, selectedChat]);
+
   const [newMessage, setNewMessage] = useState("");
   const [showBotInfo, setShowBotInfo] = useState(false);
   const navigate = useNavigate();
 
   const addChat = () => {
-    // const name = prompt("Enter name:");
-    // if (name) {
-    //   const newChat: Chat = {
-    //     id: Date.now(),
-    //     name,
-    //     lastMessage: "",
-    //     messages: [],
-    //     botInfo: {
-    //       age: 0,
-    //       hobby: "Unknown",
-    //       relationship: "Unknown",
-    //       background: "No background info available.",
-    //     },
-    //   };
-    //   setChats((prev) => [...prev, newChat]);
-    // }
-    navigate("/ChatBotForm");
+    const name = prompt("Enter name:");
+    if (name) {
+      const newChat: Chat = {
+        id: Date.now(),
+        name,
+        lastMessage: "",
+        messages: [],
+        botInfo: {
+          hobby: "Unknown",
+          relationship: "Unknown",
+          background: "No background info available.",
+        },
+      };
+      setChats((prev) => [...prev, newChat]);
+      setSelectedChat(newChat);
+    }
   };
 
   const deleteChat = (id: number) => {
@@ -77,55 +123,56 @@ const ChatApp: React.FC = () => {
 
   type Message = { text: string; sender: "user" | "bot" };
 
-  const sendMessage = () => {
-    if (!selectedChat || !newMessage.trim()) return;
+const sendMessage = () => {
+  if (!selectedChat || !newMessage.trim()) return;
 
-    const userMessage: Message = { text: newMessage.trim(), sender: "user" };
+  const userMessage: Message = { text: newMessage.trim(), sender: "user" };
+  const currentChatId = selectedChat.id; // Store the current chat ID
+  
+  setNewMessage("");
 
-    // Add user message immediately
-    const updatedChats = chats.map((chat) =>
-      chat.id === selectedChat.id
+  // Update both chats and selectedChat with user message in one go
+  setChats((prevChats) => 
+    prevChats.map((chat) =>
+      chat.id === currentChatId
         ? {
             ...chat,
             lastMessage: userMessage.text,
             messages: [...chat.messages, userMessage],
           }
         : chat
-    );
+    )
+  );
 
-    setChats(updatedChats);
+  setSelectedChat((prev) =>
+    prev && prev.id === currentChatId
+      ? { ...prev, lastMessage: userMessage.text, messages: [...prev.messages, userMessage] }
+      : prev
+  );
+
+  // Bot replies after 1 second delay
+  setTimeout(() => {
+    const botReply: Message = { text: "Hello! This is a bot reply.", sender: "bot" };
+
+    setChats((prevChats) =>
+      prevChats.map((chat) =>
+        chat.id === currentChatId
+          ? {
+              ...chat,
+              lastMessage: botReply.text,
+              messages: [...chat.messages, botReply],
+            }
+          : chat
+      )
+    );
 
     setSelectedChat((prev) =>
-      prev
-        ? { ...prev, lastMessage: userMessage.text, messages: [...prev.messages, userMessage] }
+      prev && prev.id === currentChatId
+        ? { ...prev, lastMessage: botReply.text, messages: [...prev.messages, botReply] }
         : prev
     );
-
-    setNewMessage("");
-
-    // Bot replies after 1 second delay
-    setTimeout(() => {
-      const botReply: Message = { text: "Fuck u", sender: "bot" };
-
-      setChats((prevChats) =>
-        prevChats.map((chat) =>
-          chat.id === selectedChat.id
-            ? {
-                ...chat,
-                lastMessage: botReply.text,
-                messages: [...chat.messages, botReply],
-              }
-            : chat
-        )
-      );
-
-      setSelectedChat((prev) =>
-        prev
-          ? { ...prev, lastMessage: botReply.text, messages: [...prev.messages, botReply] }
-          : prev
-      );
-    }, 1000);
-  };
+  }, 1000);
+};
 
 
   const toggleBotInfo = () => {
@@ -176,14 +223,16 @@ const ChatApp: React.FC = () => {
       </div>
 
       {/* Chat Box */}
-      <div style={{
-        ...styles.chatBox,
-        marginRight: showBotInfo ? 360 : 0,  // reserve space for bot info panel width
-        transition: "margin-right 0.4s ease",
-      }}>
+      <div
+        style={{
+          ...styles.chatBox,
+          marginRight: showBotInfo ? 360 : 0, // reserve space for bot info panel width
+          transition: "margin-right 0.4s ease",
+        }}
+      >
         {selectedChat ? (
           <>
-           <div style={styles.chatHeader}>
+            <div style={styles.chatHeader}>
               {selectedChat.name}
               <button
                 style={styles.dotButton}
@@ -225,43 +274,43 @@ const ChatApp: React.FC = () => {
               </button>
             </div>
           </>
-
         ) : (
           <div style={styles.noChat}>Select a chat to start messaging</div>
         )}
       </div>
+
       {/* Sliding Bot Info Panel */}
-          {selectedChat ? (
-            <>
-            <div
-              style={{
-                ...styles.botInfoBox,
-                right: showBotInfo ? 0 : "-420px",
-                display: showBotInfo ? "block" : "none"
-              }}
-            >
-              <h3>Bot Info</h3>
-              <div style={styles.botInfoContent}>
-                <p>
-                  <strong>Name:</strong> {selectedChat.name}
-                </p>
-                <p>
-                  <strong>Age:</strong> {selectedChat.botInfo.age}
-                </p>
-                <p>
-                  <strong>Hobby:</strong> {selectedChat.botInfo.hobby}
-                </p>
-                <p>
-                  <strong>Relationship:</strong> {selectedChat.botInfo.relationship}
-                </p>
-                <p>
-                  <strong>Background:</strong> {selectedChat.botInfo.background}
-                </p>
-              </div>
-            </div>
-            </>
-          ) : <></>
-        }
+      {selectedChat && (
+        <div
+          style={{
+            ...styles.botInfoBox,
+            right: showBotInfo ? 0 : "-420px",
+            display: showBotInfo ? "block" : "none",
+          }}
+        >
+          <h3>Bot Info</h3>
+          <div style={styles.botInfoContent}>
+            <p>
+              <strong>Name:</strong> {selectedChat.name}
+            </p>
+            <p>
+              <strong>Hobby:</strong> {selectedChat.botInfo.hobby}
+            </p>
+            <p>
+              <strong>Relationship:</strong> {selectedChat.botInfo.relationship}
+            </p>
+            <p>
+              <strong>Background:</strong> {selectedChat.botInfo.background}
+            </p>
+            <p>
+              <strong>Quirks:</strong> {selectedChat.botInfo.quirks || "None"}
+            </p>
+            <p>
+              <strong>Favorite Food:</strong> {selectedChat.botInfo.favorite_food || "Unknown"}
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
