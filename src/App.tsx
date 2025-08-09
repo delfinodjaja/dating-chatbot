@@ -1,7 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import Login from "./pages/Login";
 import SignUp from "./pages/SignUp";
-import Chatbot from "./pages/ChatBot";
+import Chatbot from "./pages/ChatApp";
 import ChatBotForm from "./pages/ChatBoxForm";
 
 
