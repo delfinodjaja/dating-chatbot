@@ -97,32 +97,33 @@ const Login: React.FC = () => {
   const [btnHover, setBtnHover] = useState(false);
   const navigate = useNavigate();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setError("");
 
-    try {
-      const response = await fetch("http://localhost:8000/api/auth/login/", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
-      });
+  try {
+    const response = await fetch("http://localhost:8000/api/auth/login/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password }),
+    });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || "Login failed");
-      }
+    const responseData = await response.json();  // read once
 
-      const data = await response.json();
-      console.log("Login successful:", data);
-      localStorage.setItem("access_token", data.access_token);
-      localStorage.setItem("refresh_token", data.refresh_token);
-
-      navigate("/ChatBotForm");
-    } catch (err: any) {
-      setError(err.message || "Server error");
+    if (!response.ok) {
+      throw new Error(responseData.detail || "Login failed");
     }
-  };
+
+    console.log("Login successful:", responseData);
+    localStorage.setItem("access_token", responseData.access_token);
+    localStorage.setItem("refresh_token", responseData.refresh_token);
+
+    navigate("/ChatBotForm");
+  } catch (err: any) {
+    setError(err.message || "Server error");
+  }
+};
+
 
   return (
     <div style={styles.container}>
