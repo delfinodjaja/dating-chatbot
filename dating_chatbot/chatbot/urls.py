@@ -9,7 +9,9 @@ urlpatterns = [
 
     # AI Chatbot endpoints
     path('api/chatbot/simple/', views.ai_chatbot_simple, name='ai_chatbot_simple'),
-    path('api/chatbot/create/',views.create_chatbot, name='create_chatbot'),
-    path('api/chatbot/get_list/', views.get_bot_list, name='get_bot')
+    path('api/chatbot/save_character/',views.save_character, name='save_character'),
+    path('api/chatbot/generate_character/', views.generate_character, name='generate_character'),
+
+    path('api/chatbot/get_list/', views.get_bot_list, name='get_list'),
 
 ]
