@@ -137,9 +137,7 @@ def logout_api(request):
 # Generate only (do NOT save)
 @csrf_exempt
 @api_view(['POST'])
-@permission_classes([AllowAny])
-@authentication_classes([])
-
+@permission_classes([IsAuthenticated])
 def generate_character(request):
     ollama_host = "https://oliver-leu-thru-alex.trycloudflare.com/api/generate"
     model = "llama3.1"
@@ -190,7 +188,6 @@ def generate_character(request):
 @csrf_exempt
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
-@authentication_classes([])
 def save_character(request):
     data = request.data
     try:
