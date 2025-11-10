@@ -317,9 +317,22 @@ def ai_chatbot_simple(request):
             'error': f'Unexpected error: {str(e)}'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+
+import hashlib
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_bot_list(request):
-    items=ChatbotItem.objects.filter(created_by=request.user)
-    serializer = ChatbotCreationForm(items, many=True)
-    return Response(serializer.data)
+    items = ChatbotItem.objects.filter(created_by=request.user)
+
+    data = []
+    for item in items:
+        unique_string = f"{item.id}-{item.created_by_id}-{item.created_at.timestamp()}"
+        unique_hash = hashlib.sha256(unique_string.encode()).hexdigest()
+        serialized = ChatbotCreationForm(item).data
+        serialized['hash_key'] = unique_hash
+
+        data.append(serialized)
+
+    return Response(data)
