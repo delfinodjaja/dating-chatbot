@@ -128,57 +128,68 @@ const ChatApp: React.FC = () => {
 
   type Message = { text: string; sender: "user" | "bot" };
 
-const sendMessage = () => {
-  if (!selectedChat || !newMessage.trim()) return;
+  const sendMessage = async () => {
+    if (!selectedChat || !newMessage.trim()) return;
 
-  const userMessage: Message = { text: newMessage.trim(), sender: "user" };
-  const currentChatId = selectedChat.hashKey; // Store the current chat ID
-  
-  setNewMessage("");
+    const text = newMessage.trim();
+    const userMessage: Message = { text, sender: "user" };
+    const currentChatKey = selectedChat.hashKey;
 
-  // Update both chats and selectedChat with user message in one go
-  setChats((prevChats) => 
-    prevChats.map((chat) =>
-      chat.hashKey === currentChatId
-        ? {
-            ...chat,
-            lastMessage: userMessage.text,
-            messages: [...chat.messages, userMessage],
-          }
-        : chat
-    )
-  );
+    setNewMessage("");
 
-  setSelectedChat((prev) =>
-    prev && prev.hashKey === currentChatId
-      ? { ...prev, lastMessage: userMessage.text, messages: [...prev.messages, userMessage] }
-      : prev
-  );
-
-  // Bot replies after 1 second delay
-  setTimeout(() => {
-    const botReply: Message = { text: "Hello! This is a bot reply.", sender: "bot" };
-
+    // Add user's message to chat
     setChats((prevChats) =>
       prevChats.map((chat) =>
-        chat.hashKey === currentChatId
-          ? {
-              ...chat,
-              lastMessage: botReply.text,
-              messages: [...chat.messages, botReply],
-            }
+        chat.hashKey === currentChatKey
+          ? { ...chat, lastMessage: text, messages: [...chat.messages, userMessage] }
           : chat
       )
     );
 
     setSelectedChat((prev) =>
-      prev && prev.hashKey === currentChatId
-        ? { ...prev, lastMessage: botReply.text, messages: [...prev.messages, botReply] }
+      prev && prev.hashKey === currentChatKey
+        ? { ...prev, lastMessage: text, messages: [...prev.messages, userMessage] }
         : prev
     );
-  }, 1000);
-};
 
+    try {
+      const token = localStorage.getItem("access_token");
+
+      const response = await fetch("http://localhost:8000/api/chatbot/simple/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: token ? `Bearer ${token}` : "",
+        },
+        body: JSON.stringify({
+          message: text,
+          setting: "tsundere" // Or yandere / kuudere / deredere
+        }),
+      });
+
+      const data = await response.json();
+
+      const botText = data.message || data.raw_response || "No response";
+      const botReply: Message = { text: botText, sender: "bot" };
+
+      // Add bot reply
+      setChats((prevChats) =>
+        prevChats.map((chat) =>
+          chat.hashKey === currentChatKey
+            ? { ...chat, lastMessage: botText, messages: [...chat.messages, botReply] }
+            : chat
+        )
+      );
+
+      setSelectedChat((prev) =>
+        prev && prev.hashKey === currentChatKey
+          ? { ...prev, lastMessage: botText, messages: [...prev.messages, botReply] }
+          : prev
+      );
+    } catch (error) {
+      console.error(error);
+    }
+  };
 
   const toggleBotInfo = () => {
     setShowBotInfo((prev) => !prev);
