@@ -10,7 +10,7 @@ from django.contrib.auth import authenticate
 from django.contrib.auth.forms import AuthenticationForm
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -137,10 +137,12 @@ def logout_api(request):
 # Generate only (do NOT save)
 @csrf_exempt
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
+@authentication_classes([])
+
 def generate_character(request):
-    ollama_host = "http://localhost:11434/api/generate"
-    model = "phi4-mini"
+    ollama_host = "https://oliver-leu-thru-alex.trycloudflare.com/api/generate"
+    model = "llama3.1"
 
     personality = request.data.get('personality', "")
     gender = request.data.get('gender', "")
@@ -188,6 +190,7 @@ def generate_character(request):
 @csrf_exempt
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@authentication_classes([])
 def save_character(request):
     data = request.data
     try:
@@ -234,8 +237,8 @@ def ai_chatbot_simple(request):
             'error': 'Message is required'
         }, status=status.HTTP_400_BAD_REQUEST)
 
-    ollama_host = "http://localhost:11434/api/generate"
-    model = "phi4-mini"
+    ollama_host = "https://oliver-leu-thru-alex.trycloudflare.com/api/generate"
+    model = "llama3.1"
 
     character_description = dere_explanations[setting]
 
