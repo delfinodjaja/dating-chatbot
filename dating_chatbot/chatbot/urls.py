@@ -14,4 +14,7 @@ urlpatterns = [
 
     path('api/chatbot/get_list/', views.get_bot_list, name='get_list'),
 
+    path('chatbot/delete/<int:chat_id>/', views.delete_chat, name='delete_chat'),
+
+
 ]

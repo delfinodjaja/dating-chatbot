@@ -1,5 +1,6 @@
 # views.py
 from django.http import  JsonResponse
+from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 from .form import UserRegistration, ChatbotCreationForm
 import json
@@ -336,3 +337,10 @@ def get_bot_list(request):
         data.append(serialized)
 
     return Response(data)
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_chat(request, chat_id: int):
+    chat_item = get_object_or_404(ChatbotItem, id=chat_id, created_by=request.user)
+    chat_item.delete()
+    return Response({"success": True, "message": "Chat deleted"})
