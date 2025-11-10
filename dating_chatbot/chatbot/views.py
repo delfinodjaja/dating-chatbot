@@ -328,7 +328,7 @@ def get_bot_list(request):
 
     data = []
     for item in items:
-        unique_string = f"{item.id}-{item.created_by_id}-{item.created_at.timestamp()}"
+        unique_string = f"{item.id}-{item.created_by_id}-{item.name}"
         unique_hash = hashlib.sha256(unique_string.encode()).hexdigest()
         serialized = ChatbotCreationForm(item).data
         serialized['hash_key'] = unique_hash
