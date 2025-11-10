@@ -1,7 +1,6 @@
 import React, { useState, useEffect, CSSProperties } from "react";
 import { useNavigate } from "react-router-dom";
 
-// Interface for your app's chat state
 interface Chat {
   id: number;
   name: string;
@@ -17,7 +16,6 @@ interface Chat {
   };
 }
 
-// Interface matching your API response shape
 interface ApiChatbot {
   id: number;
   name: string;
@@ -26,15 +24,15 @@ interface ApiChatbot {
   background?: string;
   quirks?: string;
   favorite_food?: string;
-  // Add any other fields your backend returns here
 }
 
 const ChatApp: React.FC = () => {
   const [chats, setChats] = useState<Chat[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedChatId, setSelectedChatId] = useState<number | null>(null);
+  const selectedChat = chats.find((c) => c.id === selectedChatId) || null;
 
-  // Load chatbot data from API on mount
   useEffect(() => {
     const fetchChats = async () => {
       try {
@@ -51,18 +49,19 @@ const ChatApp: React.FC = () => {
           throw new Error("Failed to fetch chats");
         }
 
-        // Use ApiChatbot[] here
         const data: ApiChatbot[] = await res.json();
 
-        // Map API data to your Chat interface
         const mappedChats: Chat[] = data.map((item) => ({
           id: item.id,
           name: item.name || "Unknown",
-          lastMessage: "", // or get from API if available
-          messages: [], // initially empty or from API
+          lastMessage: "",
+          messages: [],
           botInfo: {
             hobby: item.hobbies || "Unknown",
-            relationship: item.love_meter !== undefined ? item.love_meter.toString() : "Unknown",
+            relationship:
+              item.love_meter !== undefined
+                ? item.love_meter.toString()
+                : "Unknown",
             background: item.background || "No background info available.",
             quirks: item.quirks || "None",
             favorite_food: item.favorite_food || "Unknown",
@@ -70,6 +69,7 @@ const ChatApp: React.FC = () => {
         }));
 
         setChats(mappedChats);
+        if (mappedChats.length > 0) setSelectedChatId(mappedChats[0].id);
         setLoading(false);
       } catch (err: any) {
         setError(err.message);
@@ -79,16 +79,6 @@ const ChatApp: React.FC = () => {
 
     fetchChats();
   }, []);
-
-  // Make sure selectedChat initializes properly after chats load
-  const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
-
-  // When chats change, set first chat as selected by default if none selected
-  useEffect(() => {
-    if (chats.length > 0 && !selectedChat) {
-      setSelectedChat(chats[0]);
-    }
-  }, [chats, selectedChat]);
 
   const [newMessage, setNewMessage] = useState("");
   const [showBotInfo, setShowBotInfo] = useState(false);
@@ -109,84 +99,74 @@ const ChatApp: React.FC = () => {
         },
       };
       setChats((prev) => [...prev, newChat]);
-      setSelectedChat(newChat);
+      setSelectedChatId(newChat.id);
     }
   };
 
   const deleteChat = (id: number) => {
     setChats((prev) => prev.filter((chat) => chat.id !== id));
-    if (selectedChat?.id === id) {
-      setSelectedChat(null);
+    if (selectedChatId === id) {
+      setSelectedChatId(null);
       setShowBotInfo(false);
     }
   };
 
   type Message = { text: string; sender: "user" | "bot" };
 
-const sendMessage = () => {
-  if (!selectedChat || !newMessage.trim()) return;
+  const sendMessage = () => {
+    if (!selectedChatId || !newMessage.trim()) return;
 
-  const userMessage: Message = { text: newMessage.trim(), sender: "user" };
-  const currentChatId = selectedChat.id; // Store the current chat ID
-  
-  setNewMessage("");
+    const userMessage: Message = {
+      text: newMessage.trim(),
+      sender: "user",
+    };
 
-  // Update both chats and selectedChat with user message in one go
-  setChats((prevChats) => 
-    prevChats.map((chat) =>
-      chat.id === currentChatId
-        ? {
-            ...chat,
-            lastMessage: userMessage.text,
-            messages: [...chat.messages, userMessage],
-          }
-        : chat
-    )
-  );
-
-  setSelectedChat((prev) =>
-    prev && prev.id === currentChatId
-      ? { ...prev, lastMessage: userMessage.text, messages: [...prev.messages, userMessage] }
-      : prev
-  );
-
-  // Bot replies after 1 second delay
-  setTimeout(() => {
-    const botReply: Message = { text: "Hello! This is a bot reply.", sender: "bot" };
+    const currentChatId = selectedChatId;
+    setNewMessage("");
 
     setChats((prevChats) =>
       prevChats.map((chat) =>
         chat.id === currentChatId
           ? {
               ...chat,
-              lastMessage: botReply.text,
-              messages: [...chat.messages, botReply],
+              lastMessage: userMessage.text,
+              messages: [...chat.messages, userMessage],
             }
           : chat
       )
     );
 
-    setSelectedChat((prev) =>
-      prev && prev.id === currentChatId
-        ? { ...prev, lastMessage: botReply.text, messages: [...prev.messages, botReply] }
-        : prev
-    );
-  }, 1000);
-};
+    setTimeout(() => {
+      const botReply: Message = {
+        text: "Hello! This is a bot reply.",
+        sender: "bot",
+      };
 
+      setChats((prevChats) =>
+        prevChats.map((chat) =>
+          chat.id === currentChatId
+            ? {
+                ...chat,
+                lastMessage: botReply.text,
+                messages: [...chat.messages, botReply],
+              }
+            : chat
+        )
+      );
+    }, 1000);
+  };
 
   const toggleBotInfo = () => {
     setShowBotInfo((prev) => !prev);
   };
 
   const onSelectChat = (chat: Chat) => {
-    setSelectedChat(chat);
+    setSelectedChatId(chat.id);
     setShowBotInfo(false);
   };
 
   return (
     <div style={styles.container}>
-      {/* Left Sidebar */}
       <div style={styles.sidebar}>
         <div style={styles.sidebarHeader}>
           <h2 style={styles.sidebarTitle}>Chats</h2>
@@ -200,7 +180,8 @@ const sendMessage = () => {
               key={chat.id}
               style={{
                 ...styles.chatItem,
-                background: selectedChat?.id === chat.id ? "#331133" : "transparent",
+                background:
+                  selectedChatId === chat.id ? "#331133" : "transparent",
               }}
               onClick={() => onSelectChat(chat)}
             >
@@ -222,11 +203,10 @@ const sendMessage = () => {
         </div>
       </div>
 
-      {/* Chat Box */}
       <div
         style={{
           ...styles.chatBox,
-          marginRight: showBotInfo ? 360 : 0, // reserve space for bot info panel width
+          marginRight: showBotInfo ? 360 : 0,
           transition: "margin-right 0.4s ease",
         }}
       >
@@ -249,7 +229,8 @@ const sendMessage = () => {
                   key={idx}
                   style={{
                     ...styles.messageBubble,
-                    alignSelf: msg.sender === "user" ? "flex-end" : "flex-start",
+                    alignSelf:
+                      msg.sender === "user" ? "flex-end" : "flex-start",
                     background: msg.sender === "user" ? "#f08" : "#220022",
                     color: "#fff",
                   }}
@@ -279,7 +260,6 @@ const sendMessage = () => {
         )}
       </div>
 
-      {/* Sliding Bot Info Panel */}
       {selectedChat && (
         <div
           style={{
@@ -297,16 +277,18 @@ const sendMessage = () => {
               <strong>Hobby:</strong> {selectedChat.botInfo.hobby}
             </p>
             <p>
-              <strong>Relationship:</strong> {selectedChat.botInfo.relationship}
+              <strong>Relationship:</strong>{" "}
+              {selectedChat.botInfo.relationship}
             </p>
             <p>
               <strong>Background:</strong> {selectedChat.botInfo.background}
             </p>
             <p>
-              <strong>Quirks:</strong> {selectedChat.botInfo.quirks || "None"}
+              <strong>Quirks:</strong> {selectedChat.botInfo.quirks}
             </p>
             <p>
-              <strong>Favorite Food:</strong> {selectedChat.botInfo.favorite_food || "Unknown"}
+              <strong>Favorite Food:</strong>{" "}
+              {selectedChat.botInfo.favorite_food}
             </p>
           </div>
         </div>
@@ -315,7 +297,6 @@ const sendMessage = () => {
   );
 };
 
-// Styles
 const styles: { [key: string]: CSSProperties } = {
   container: {
     display: "flex",
@@ -391,7 +372,7 @@ const styles: { [key: string]: CSSProperties } = {
     borderBottom: "1px solid #f0a",
     fontWeight: "bold",
     fontSize: "18px",
-    position: "relative", // needed for dot button absolute
+    position: "relative",
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
